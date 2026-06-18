@@ -1,0 +1,34 @@
+framework: frameworks/zeolites/FAU.cif
+grid_n: 64
+connectivity: 26
+min_cluster_size: 4
+
+[topological] probe=1.2 -> frameworks/zeolites/FAU.blocked_topo.npz
+  grid_n: 64
+  probe_radius: 1.2
+  connectivity: 26
+  min_cluster_size: 4
+  mode: topological
+  solid_voxels: 61056
+  accessible_voxels: 201088
+  blocked_voxels: 0
+  void_voxels: 201088
+  accessible_fraction_of_void: 1.0
+  n_clusters: 0
+  largest_clusters: []
+  speckle_removed: 0
+
+[steric] probe=2.5 -> frameworks/zeolites/FAU.blocked.npz
+  grid_n: 64
+  probe_radius: 2.5
+  connectivity: 26
+  min_cluster_size: 4
+  mode: steric
+  solid_voxels: 175040
+  accessible_voxels: 81952
+  blocked_voxels: 5152
+  void_voxels: 87104
+  accessible_fraction_of_void: 0.940852314474651
+  n_clusters: 8
+  largest_clusters: [644, 644, 644, 644, 644, 644, 644, 644]
+  speckle_removed: 12
