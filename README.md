@@ -2,12 +2,7 @@
 
 **Accessibility-aware Monte Carlo packing of guest molecules in nanoporous frameworks**
 
-[![Paper manuscript](https://img.shields.io/badge/manuscript-final%2Fmanuscript.pdf-blue)](final/manuscript.pdf)
-
 Construct physically valid host–guest starting structures for zeolites, MOFs, and COFs by coupling a **guest-size-dependent steric pore map** directly into Monte Carlo insertion—unlike geometry-only packers that can seed guests in topologically void but kinetically inaccessible cages.
-
-**Authors:** Jiaao Wang<sup>†,‡</sup>, Xiwen Chi<sup>†</sup>, Weisi Ma<sup>†</sup>, Xiujing Li  
-<sup>†</sup> Equal contribution · <sup>‡</sup> Correspondence: [wangjiaao0720@utexas.edu](mailto:wangjiaao0720@utexas.edu)
 
 ---
 
@@ -39,6 +34,38 @@ flowchart LR
 
 ---
 
+## Figures
+
+### Figure 1 — Workflow and FAU pore map
+
+![Figure 1: accessibility-aware packing workflow and steric pore map in FAU](figures/fig1_overview.png)
+
+Four-step workflow; steric accessibility map of FAU (eight blocked sodalite β-cages); voxel cross-section; volume partition (67% solid, 31% accessible, 2% blocked).
+
+### Figure 2 — Probe physics and ablation
+
+![Figure 2: guest-size-dependent pore closure and ablation](figures/fig2_probe_ablation.png)
+
+Accessible volume vs probe radius; closed-cage fraction; misplacement ablation (0% vs 4–12.5%); OVITO renders and MC convergence.
+
+### Figure 3 — Application cases vs Packmol
+
+![Figure 3: electrolyte, CO₂ adsorption, and CO₂/H₂O separation vs Packmol](figures/fig3_applications.png)
+
+Three loading scenarios in FAU; Packmol violations highlighted; closed-cage counts and minimum guest–framework distances.
+
+### Figure 4 — Cross-framework generalization
+
+![Figure 4: generalization across zeolites, MOFs, and COFs](figures/fig4_generalization.png)
+
+MOF-5, UiO-66, COF-5 renders; loading × violation heat map; accessible volume by material class; Packmol misplacement on orthogonal hosts.
+
+Benchmark hosts: **FAU, LTL, ERI, MOF-5, UiO-66, COF-5** · Guests: **CO₂, H₂O, EC, LiPF₆**
+
+Full captions: [`figures/captions.md`](figures/captions.md)
+
+---
+
 ## Repository layout
 
 ```
@@ -51,14 +78,13 @@ zeoinsert/
 ├── fig*.py                  # Compose Figures 1–4
 ├── render_ovito.py          # OVITO Tachyon structure renders
 ├── figures/                 # Paper figures (PDF/PNG) + panel renders
-├── final/                   # Full manuscript (MD + PDF build script)
+├── final/                   # Manuscript source (Markdown)
 ├── runs/                    # Cached numerical results (.npz)
 ├── frameworks/              # Host CIF structures
 └── molecules/               # Guest XYZ geometries
 ```
 
-**Manuscript:** [`final/manuscript.md`](final/manuscript.md) · [`final/manuscript.pdf`](final/manuscript.pdf)  
-**Methods:** [`METHODS.md`](METHODS.md) · **Captions:** [`figures/captions.md`](figures/captions.md)
+**Manuscript:** [`final/manuscript.md`](final/manuscript.md) · **Methods:** [`METHODS.md`](METHODS.md)
 
 ---
 
@@ -115,7 +141,7 @@ result = pack(
 print(result.n_misplaced, "guests in blocked cages")
 ```
 
-### Reproduce paper figures
+### Reproduce figures
 
 Cached data in `runs/` allows figure composition without re-running long simulations:
 
@@ -136,27 +162,6 @@ python fig4_generalization.py
 
 Outputs: `figures/fig1_overview.pdf` … `figures/fig4_generalization.pdf`
 
-### Build manuscript PDF
-
-```bash
-./final/build_pdf.sh
-# -> final/manuscript.pdf
-```
-
----
-
-## Key results (summary)
-
-| Figure | Content |
-|--------|---------|
-| **Fig. 1** | Four-step workflow; FAU steric map (8 blocked β-cages, 2% volume) |
-| **Fig. 2** | Probe-radius sweep; ablation (0% vs 4–12.5% misplacement); MC convergence |
-| **Fig. 3** | Electrolyte / CO₂ / separation vs Packmol (0 vs 3–5 closed-cage errors) |
-| **Fig. 4** | Six frameworks × four guests; MOF/COF generalization |
-
-Benchmark hosts: **FAU, LTL, ERI, MOF-5, UiO-66, COF-5**  
-Guests: **CO₂, H₂O, EC, LiPF₆**
-
 ---
 
 ## Default parameters
@@ -173,14 +178,6 @@ See [`METHODS.md`](METHODS.md) for full equations and algorithms.
 
 ---
 
-## Citation
-
-If you use this code, please cite:
-
-> Wang, J.; Chi, X.; Ma, W.; Li, X. *Accessibility-aware Monte Carlo packing of guest molecules in nanoporous frameworks.* (2026). Code: https://github.com/JiaaoWANG-ut/zeoinsert
-
----
-
 ## License
 
-Contact the authors for licensing questions. Third-party tools ([Packmol](https://m3g.github.io/packmol/), [OVITO](https://www.ovito.org/)) are subject to their own licenses.
+Third-party tools ([Packmol](https://m3g.github.io/packmol/), [OVITO](https://www.ovito.org/)) are subject to their own licenses.
