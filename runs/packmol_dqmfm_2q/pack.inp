@@ -1,0 +1,19 @@
+tolerance 2.2
+filetype xyz
+seed 12345
+output /home/jiaao/quicktest/zeoinsert/runs/packmol_dqmfm_2q/packed.xyz
+
+structure /home/jiaao/quicktest/zeoinsert/runs/packmol_dqmfm_2q/framework.xyz
+  number 1
+  fixed 0. 0. 0. 0. 0. 0.
+end structure
+
+structure /home/jiaao/quicktest/zeoinsert/runs/packmol_dqmfm_2q/guest_0.xyz
+  number 16
+  inside box 0.000 0.000 0.000 24.345 24.345 24.345
+end structure
+
+structure /home/jiaao/quicktest/zeoinsert/runs/packmol_dqmfm_2q/guest_1.xyz
+  number 16
+  inside box 0.000 0.000 0.000 24.345 24.345 24.345
+end structure

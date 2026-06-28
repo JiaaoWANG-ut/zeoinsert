@@ -30,13 +30,27 @@ def minimum_image(vecs, cell, inv_cell):
 
 
 def min_distance_points_to_framework(cart_pts, pos_fw, cell, inv_cell, batch=2048):
-    mins = np.empty(len(cart_pts), dtype=float)
-    for start in range(0, len(cart_pts), batch):
-        pts = cart_pts[start : start + batch]
-        diff = pts[:, None, :] - pos_fw[None, :, :]
-        diff = minimum_image(diff, cell, inv_cell)
-        mins[start : start + batch] = np.linalg.norm(diff, axis=2).min(axis=1)
-    return mins
+    """Nearest framework-atom distance for each point (minimum-image)."""
+    try:
+        from scipy.spatial import cKDTree
+        # replicate framework into 3x3x3 images so a plain KD-tree captures
+        # the minimum-image distance for any point inside the cell
+        offsets = np.array([
+            i * cell[0] + j * cell[1] + k * cell[2]
+            for i in (-1, 0, 1) for j in (-1, 0, 1) for k in (-1, 0, 1)
+        ])
+        rep = (pos_fw[:, None, :] + offsets[None, :, :]).reshape(-1, 3)
+        tree = cKDTree(rep)
+        dist, _ = tree.query(cart_pts, k=1, workers=-1)
+        return dist
+    except Exception:
+        mins = np.empty(len(cart_pts), dtype=float)
+        for start in range(0, len(cart_pts), batch):
+            pts = cart_pts[start : start + batch]
+            diff = pts[:, None, :] - pos_fw[None, :, :]
+            diff = minimum_image(diff, cell, inv_cell)
+            mins[start : start + batch] = np.linalg.norm(diff, axis=2).min(axis=1)
+        return mins
 
 
 def _grid_frac_centers(grid_n):
@@ -71,88 +85,100 @@ def _neighbor_steps(connectivity):
     raise ValueError("connectivity must be 6 or 26")
 
 
+def _structure_element(connectivity):
+    from scipy import ndimage
+    return ndimage.generate_binary_structure(3, 1 if connectivity == 6 else 3)
+
+
+def _connected_components(mask, connectivity=26):
+    """Label periodic 3D connected components using scipy + boundary merge.
+
+    scipy.ndimage.label is non-periodic; we merge labels that touch across
+    opposite faces via union-find to recover periodicity.
+    """
+    from scipy import ndimage
+
+    struct = _structure_element(connectivity)
+    labels, n = ndimage.label(mask, structure=struct)
+    if n == 0:
+        return labels.astype(np.int32), []
+
+    parent = list(range(n + 1))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    # merge labels adjacent across periodic neighbors (unique pairs only)
+    shifts = _NEIGHBORS_6 if connectivity == 6 else _NEIGHBORS_26
+    for (di, dj, dk) in shifts:
+        rolled = np.roll(labels, (-di, -dj, -dk), axis=(0, 1, 2))
+        touch = (labels > 0) & (rolled > 0) & (labels != rolled)
+        if not touch.any():
+            continue
+        pairs = np.unique(np.stack([labels[touch], rolled[touch]], axis=1), axis=0)
+        for x, y in pairs.tolist():
+            union(int(x), int(y))
+
+    # relabel by root
+    remap = {}
+    new_labels = np.zeros_like(labels, dtype=np.int32)
+    nz = labels > 0
+    roots = np.vectorize(find)(labels[nz])
+    next_id = 0
+    sizes_map = {}
+    out_ids = np.empty(roots.shape, dtype=np.int32)
+    for idx, r in enumerate(roots.tolist()):
+        if r not in remap:
+            next_id += 1
+            remap[r] = next_id
+        cid = remap[r]
+        out_ids[idx] = cid
+        sizes_map[cid] = sizes_map.get(cid, 0) + 1
+    new_labels[nz] = out_ids
+    sizes = [sizes_map[i] for i in range(1, next_id + 1)]
+    return new_labels, sizes
+
+
+def _component_touches_face(labels, comp_id):
+    faces = (
+        labels[0, :, :], labels[-1, :, :],
+        labels[:, 0, :], labels[:, -1, :],
+        labels[:, :, 0], labels[:, :, -1],
+    )
+    return any((f == comp_id).any() for f in faces)
+
+
 def _flood_fill_accessible(void_mask, connectivity=26):
-    """BFS flood fill from unit-cell boundary void voxels (periodic)."""
-    n = void_mask.shape[0]
+    """Accessible void = periodic void components that reach the cell boundary."""
+    labels, sizes = _connected_components(void_mask, connectivity=connectivity)
     accessible = np.zeros_like(void_mask, dtype=bool)
-    steps = _neighbor_steps(connectivity)
-    q = []
-
-    def try_add(i, j, k):
-        if void_mask[i, j, k] and not accessible[i, j, k]:
-            accessible[i, j, k] = True
-            q.append((i, j, k))
-
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                if i in (0, n - 1) or j in (0, n - 1) or k in (0, n - 1):
-                    try_add(i, j, k)
-
-    while q:
-        i, j, k = q.pop()
-        for di, dj, dk in steps:
-            try_add((i + di) % n, (j + dj) % n, (k + dk) % n)
-
+    for cid in range(1, len(sizes) + 1):
+        if _component_touches_face(labels, cid):
+            accessible |= labels == cid
     return accessible
 
 
 def _cluster_sizes(mask, connectivity=26):
-    n = mask.shape[0]
-    steps = _neighbor_steps(connectivity)
-    visited = np.zeros_like(mask, dtype=bool)
-    sizes = []
-
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                if not mask[i, j, k] or visited[i, j, k]:
-                    continue
-                stack = [(i, j, k)]
-                visited[i, j, k] = True
-                count = 0
-                while stack:
-                    ci, cj, ck = stack.pop()
-                    count += 1
-                    for di, dj, dk in steps:
-                        ni, nj, nk = (ci + di) % n, (cj + dj) % n, (ck + dk) % n
-                        if mask[ni, nj, nk] and not visited[ni, nj, nk]:
-                            visited[ni, nj, nk] = True
-                            stack.append((ni, nj, nk))
-                sizes.append(count)
-    return sizes
+    return _connected_components(mask, connectivity=connectivity)[1]
 
 
 def _filter_small_blocked_clusters(blocked, min_cluster_size, connectivity=26):
     """Drop speckle: tiny blocked clusters are treated as accessible artifacts."""
     if min_cluster_size <= 1:
         return blocked.copy()
-
-    n = blocked.shape[0]
-    steps = _neighbor_steps(connectivity)
-    visited = np.zeros_like(blocked, dtype=bool)
+    labels, sizes = _connected_components(blocked, connectivity=connectivity)
     filtered = blocked.copy()
-
-    for i in range(n):
-        for j in range(n):
-            for k in range(n):
-                if not blocked[i, j, k] or visited[i, j, k]:
-                    continue
-                stack = [(i, j, k)]
-                component = []
-                visited[i, j, k] = True
-                while stack:
-                    ci, cj, ck = stack.pop()
-                    component.append((ci, cj, ck))
-                    for di, dj, dk in steps:
-                        ni, nj, nk = (ci + di) % n, (cj + dj) % n, (ck + dk) % n
-                        if blocked[ni, nj, nk] and not visited[ni, nj, nk]:
-                            visited[ni, nj, nk] = True
-                            stack.append((ni, nj, nk))
-                if len(component) < min_cluster_size:
-                    for ci, cj, ck in component:
-                        filtered[ci, cj, ck] = False
-
+    for lab, sz in enumerate(sizes, start=1):
+        if sz < min_cluster_size:
+            filtered[labels == lab] = False
     return filtered
 
 
@@ -305,6 +331,28 @@ class PoreGrid:
         frac = self.voxel_centers(mask_name)
         return frac @ cell, frac
 
+    def blocked_blobs(self, cell):
+        """Collapse each blocked cluster into one (center_cart, radius) blob."""
+        labels, sizes = _connected_components(self.blocked_mask,
+                                              connectivity=self.connectivity)
+        if not sizes:
+            return np.zeros((0, 3)), np.zeros(0)
+        t = (np.arange(self.grid_n) + 0.5) / self.grid_n
+        fx, fy, fz = np.meshgrid(t, t, t, indexing="ij")
+        voxel = max(np.linalg.norm(cell, axis=1)) / self.grid_n
+        centers, radii = [], []
+        for cid, sz in enumerate(sizes, start=1):
+            m = labels == cid
+            # average via complex exponent to respect periodicity per axis
+            cf = []
+            for fa in (fx, fy, fz):
+                ang = 2 * np.pi * fa[m]
+                cf.append((np.arctan2(np.sin(ang).mean(), np.cos(ang).mean())
+                           / (2 * np.pi)) % 1.0)
+            centers.append(np.array(cf) @ cell)
+            radii.append((3 * sz / (4 * np.pi)) ** (1 / 3) * voxel)
+        return np.array(centers), np.array(radii)
+
     def save(self, path):
         path = Path(path)
         meta = {
@@ -408,4 +456,52 @@ def t_edge_segment(p1, p2, cell, inv_cell):
     frac = (p2 - p1) @ inv_cell
     frac -= np.round(frac)
     return p1, p1 + frac @ cell
+
+
+def probe_sweep(pos_fw, cell, inv_cell, radii, grid_n=48,
+                connectivity=26, min_cluster_size=4):
+    """Scan accessibility as a function of probe radius.
+
+    Returns dict of arrays aligned to `radii`:
+      accessible_void_fraction : accessible / void voxels
+      accessible_cell_fraction : accessible / total voxels (usable volume)
+      blocked_void_fraction    : blocked / void voxels
+      largest_cluster_voxels   : size of the largest blocked cluster
+      n_blocked_clusters       : number of blocked clusters
+    """
+    radii = np.asarray(radii, dtype=float)
+    total = grid_n ** 3
+    out = {
+        "radii": radii,
+        "accessible_void_fraction": np.zeros_like(radii),
+        "accessible_cell_fraction": np.zeros_like(radii),
+        "blocked_void_fraction": np.zeros_like(radii),
+        "largest_cluster_voxels": np.zeros_like(radii),
+        "n_blocked_clusters": np.zeros_like(radii),
+    }
+    for k, r in enumerate(radii):
+        grid = PoreGrid.build(
+            pos_fw, cell, inv_cell,
+            grid_n=grid_n, probe_radius=float(r),
+            connectivity=connectivity, min_cluster_size=min_cluster_size,
+            mode="sweep",
+        )
+        s = grid.stats
+        void = max(1, s["void_voxels"])
+        largest = s.get("largest_clusters", [])
+        out["accessible_void_fraction"][k] = s["accessible_voxels"] / void
+        out["accessible_cell_fraction"][k] = s["accessible_voxels"] / total
+        out["blocked_void_fraction"][k] = s["blocked_voxels"] / void
+        out["largest_cluster_voxels"][k] = largest[0] if largest else 0
+        out["n_blocked_clusters"][k] = s.get("n_clusters", 0)
+    return out
+
+
+def count_centers_in_blocked(centers_frac, grid):
+    """Count molecule centers (fractional coords, (N,3)) landing in blocked voxels."""
+    centers_frac = np.atleast_2d(np.asarray(centers_frac, dtype=float))
+    n = grid.grid_n
+    idx = np.floor(np.mod(centers_frac, 1.0) * n).astype(int) % n
+    flags = grid.blocked_mask[idx[:, 0], idx[:, 1], idx[:, 2]]
+    return int(np.count_nonzero(flags)), flags.astype(bool)
 

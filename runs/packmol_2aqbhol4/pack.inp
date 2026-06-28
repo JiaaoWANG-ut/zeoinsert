@@ -1,0 +1,14 @@
+tolerance 2.2
+filetype xyz
+seed 42
+output /home/jiaao/quicktest/zeoinsert/runs/packmol_2aqbhol4/packed.xyz
+
+structure /home/jiaao/quicktest/zeoinsert/runs/packmol_2aqbhol4/framework.xyz
+  number 1
+  fixed 0. 0. 0. 0. 0. 0.
+end structure
+
+structure /home/jiaao/quicktest/zeoinsert/runs/packmol_2aqbhol4/guest_0.xyz
+  number 24
+  inside box 2.500 2.500 2.500 23.366 23.366 23.366
+end structure
