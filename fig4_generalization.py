@@ -24,7 +24,9 @@ def main():
     acc = d["accessible_cell_fraction"]
     pk_inacc = d["packmol_inaccessible"]
 
-    fig = plt.figure(figsize=(DOUBLE_COL, DOUBLE_COL * 0.78))
+    # Match the manuscript's existing Figure 4 aspect ratio so the revised
+    # artwork can replace it without distortion in Word.
+    fig = plt.figure(figsize=(DOUBLE_COL, DOUBLE_COL * 0.743))
     gs = GridSpec(2, 3, figure=fig, hspace=0.38, wspace=0.32,
                   left=0.08, right=0.98, top=0.93, bottom=0.08,
                   height_ratios=[1.05, 0.95])
@@ -59,6 +61,8 @@ def main():
     ax.set_xlabel("Guest")
     ax.set_ylabel("Framework")
     ax.set_title("Loading (molecules / cell)", fontsize=6.5)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.040, pad=0.02)
+    cbar.ax.tick_params(labelsize=5)
     panel_label(ax, "d")
 
     # (e) accessible volume fraction
@@ -86,12 +90,15 @@ def main():
         ax.bar(x + offset, vals, w, label=fws[fi],
                color=COLORS["ours"] if k == 0 else COLORS["packmol"])
     ax.axhline(0, color="k", lw=0.5)
-    ax.plot(x, [0] * len(x), "D", color=COLORS["ours"], ms=4, label="Ours (0)")
+    # Offset the zero-valued markers slightly above the axis so they remain
+    # visible and do not overlap the bar baseline.
+    ax.plot(x, [0.12] * len(x), "D", color=COLORS["ours"], ms=4,
+            clip_on=False, label="Ours (0)")
     ax.set_xticks(x)
     ax.set_xticklabels(cubic_guests, rotation=45, ha="right")
     ax.set_ylabel("Guests in closed cages")
     ax.set_title("Packmol on cubic hosts", fontsize=6.5)
-    ax.legend(fontsize=5, loc="upper right", handlelength=1.0)
+    ax.legend(loc="upper left", handlelength=1.2)
     panel_label(ax, "f")
 
     pdf, png = save_figure(fig, "fig4_generalization")

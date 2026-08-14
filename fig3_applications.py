@@ -73,7 +73,7 @@ def main():
     ax.set_xticks(x)
     ax.set_xticklabels(["elec.", "CO$_2$", "sep."])
     ax.set_ylabel("Physical violations (Packmol)")
-    ax.legend(loc="upper right", fontsize=5, handlelength=1.0)
+    ax.legend(loc="upper left", handlelength=1.2)
     ax.set_title("All violation types", fontsize=6.5)
     panel_label(ax, "d")
 
@@ -90,7 +90,7 @@ def main():
     ax.text(2.2, ax.get_ylim()[1] * 0.9, " cutoff", fontsize=5, va="top")
     ax.set_xlabel("Guest–framework min. distance (Å)")
     ax.set_ylabel("Density")
-    ax.legend(loc="upper right", handlelength=1.2)
+    ax.legend(loc="upper left", handlelength=1.2)
     panel_label(ax, "e")
 
     pdf, png = save_figure(fig, "fig3_applications")
