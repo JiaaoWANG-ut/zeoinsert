@@ -16,12 +16,16 @@ $$
 \mathbf{r} = \mathbf{f}\,\mathbf{H}, \qquad \mathbf{f} = \mathbf{r}\,\mathbf{H}^{-1}.
 $$
 
-All interatomic distances are evaluated under **minimum-image convention** (MIC). For displacement vectors $\{\Delta\mathbf{r}_k\}$, the MIC-adjusted displacement is
+All interatomic distances are evaluated under **minimum-image convention** (MIC). For a displacement $\Delta\mathbf{r}$ with fractional representation $\Delta\mathbf{f}=\Delta\mathbf{r}\mathbf{H}^{-1}$, the closest periodic image is
 
 $$
-\Delta\mathbf{r}_k^{\mathrm{MIC}} = \Delta\mathbf{r}_k - \mathrm{round}(\Delta\mathbf{f}_k)\,\mathbf{H},
-\qquad \Delta\mathbf{f}_k = \Delta\mathbf{r}_k\,\mathbf{H}^{-1},
+\mathbf{n}^{*}=\underset{\mathbf{n}\in\mathbb{Z}^{3}}{\operatorname{argmin}}
+\left\|(\Delta\mathbf{f}-\mathbf{n})\mathbf{H}\right\|,
+\qquad
+\Delta\mathbf{r}^{\mathrm{MIC}}=(\Delta\mathbf{f}-\mathbf{n}^{*})\mathbf{H},
 $$
+
+which is valid for orthogonal and triclinic cells. The implementation first searches the 27 neighbouring images and uses a singular-value lower bound to certify the result; vectors that are not certified fall back to a wider finite search guaranteed to contain the closest lattice image.
 
 and the minimum distance between point sets $A$ and $B$ is
 
@@ -43,6 +47,8 @@ $$
 \mathbf{f}_{ijk} = \frac{1}{N_g}\left(i+\tfrac{1}{2},\, j+\tfrac{1}{2},\, k+\tfrac{1}{2}\right),
 \qquad i,j,k \in \{0,\ldots,N_g-1\}.
 $$
+
+The convergence study evaluated $N_g=32$, 48, 64 and 96 for all six frameworks. Based on these results, $N_g=64$ is used for the detailed FAU analysis and $N_g=48$ for cross-framework screening; borderline narrow-window cases are checked at higher resolution.
 
 For each voxel centre $\mathbf{r}_{ijk} = \mathbf{f}_{ijk}\mathbf{H}$, the distance to the nearest framework atom is computed (via a $3\times3\times3$ replicated KD-tree for efficiency). A voxel is classified as **solid** if
 
@@ -168,6 +174,23 @@ At each MC step, the guest with the largest per-molecule conflict score
 $$
 c_i = e_{\mathrm{fw}}^{(i)} + e_{\mathrm{block}}^{(i)} + \sum_{j \neq i} e_{\mathrm{gg}}^{(ij)}
 $$
+
+where
+
+$$
+e_{\mathrm{fw}}^{(i)}=\max\!\left(0,d_{\mathrm{fw}}^{(i)}-d_{\min}^{(i,\mathrm{fw})}\right)^2,
+\qquad
+e_{\mathrm{block}}^{(i)}=\lambda_{\mathrm{block}}\,\mathbf{1}[\mathbf{f}_i\in\mathcal{B}],
+$$
+
+and
+
+
+$$
+e_{\mathrm{gg}}^{(ij)}=\max\!\left(0,d_{\mathrm{mm}}^{(ij)}-d_{\min}^{(ij)}\right)^2.
+$$
+
+Thus $c_i$ contains every energy term involving guest $i$ and every term that must be recomputed when that guest is moved.
 
 is selected for trial displacement. Three move types are applied with probabilities $(p_{\mathrm{small}}, p_{\mathrm{jump}}, p_{\mathrm{rot}}) = (0.70,\,0.10,\,0.20)$:
 

@@ -100,6 +100,19 @@ pip install numpy scipy matplotlib ovito
 # sudo apt install packmol
 ```
 
+Run the geometry regression tests with:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Reviewer-requested grid, cutoff, penalty, and repeated-seed diagnostics can be
+reproduced with `python reviewer_experiments.py`. The canonical tabular outputs
+are written to `runs/reviewer/`; `packing_sensitivity.csv` is the single source
+for the packing diagnostics summarized in the manuscript. On memory-constrained
+systems, run the two sections independently with `--section grid` and
+`--section packing`.
+
 Download framework and molecule files (if not already present):
 
 ```bash

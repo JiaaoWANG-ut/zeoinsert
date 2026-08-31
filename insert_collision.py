@@ -2,6 +2,7 @@
 import numpy as np
 from ovito.io import import_file
 
+from periodic_geometry import minimum_image
 from pore_accessibility import PoreGrid
 
 # ========== 用户参数 ==========
@@ -84,12 +85,6 @@ def get_symbols(data):
         return [type_map[i] for i in type_ids]
     else:
         raise RuntimeError("No Element info found in data.")
-
-def minimum_image(vecs, cell, inv_cell):
-    """ 最小镜像：vecs 可以是 (...,3) """
-    frac = vecs @ inv_cell
-    frac -= np.round(frac)
-    return frac @ cell
 
 def min_distance(A, B, cell, inv_cell):
     """ A:(n,3), B:(m,3) 的最小 PBC 距离 """
