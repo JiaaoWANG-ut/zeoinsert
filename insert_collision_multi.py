@@ -4,6 +4,7 @@
 import numpy as np
 from ovito.io import import_file
 
+from periodic_geometry import minimum_image
 from pore_accessibility import PoreGrid
 
 # ========== 用户参数 ==========
@@ -85,12 +86,6 @@ def get_symbols(data):
         type_map = {t.id: t.name for t in types}
         return [type_map[i] for i in type_ids]
     raise RuntimeError("No Element info found in data.")
-
-
-def minimum_image(vecs, cell, inv_cell):
-    frac = vecs @ inv_cell
-    frac -= np.round(frac)
-    return frac @ cell
 
 
 def min_distance(a, b, cell, inv_cell):

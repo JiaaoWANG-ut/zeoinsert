@@ -14,13 +14,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from periodic_geometry import minimum_image
 from pore_accessibility import count_centers_in_blocked
-
-
-def minimum_image(vecs, cell, inv_cell):
-    frac = vecs @ inv_cell
-    frac -= np.round(frac)
-    return frac @ cell
 
 
 def _min_dist(a, b, cell, inv_cell):

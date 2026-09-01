@@ -8,6 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
+from periodic_geometry import minimum_image
+
 _NEIGHBORS_6 = (
     (1, 0, 0), (-1, 0, 0),
     (0, 1, 0), (0, -1, 0),
@@ -21,12 +23,6 @@ _NEIGHBORS_26 = tuple(
     for dk in (-1, 0, 1)
     if (di, dj, dk) != (0, 0, 0)
 )
-
-
-def minimum_image(vecs, cell, inv_cell):
-    frac = vecs @ inv_cell
-    frac -= np.round(frac)
-    return frac @ cell
 
 
 def min_distance_points_to_framework(cart_pts, pos_fw, cell, inv_cell, batch=2048):
@@ -504,4 +500,3 @@ def count_centers_in_blocked(centers_frac, grid):
     idx = np.floor(np.mod(centers_frac, 1.0) * n).astype(int) % n
     flags = grid.blocked_mask[idx[:, 0], idx[:, 1], idx[:, 2]]
     return int(np.count_nonzero(flags)), flags.astype(bool)
-

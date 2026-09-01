@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from ovito.io import import_file
 
+from periodic_geometry import minimum_image
 from pore_accessibility import PoreGrid, count_centers_in_blocked
 
 
@@ -56,12 +57,6 @@ def get_symbols(data):
         type_map = {t.id: t.name for t in data.particles.particle_types.types}
         return [type_map[i] for i in type_ids]
     raise RuntimeError("No element/type info found in data.")
-
-
-def minimum_image(vecs, cell, inv_cell):
-    frac = vecs @ inv_cell
-    frac -= np.round(frac)
-    return frac @ cell
 
 
 def min_distance(a, b, cell, inv_cell):

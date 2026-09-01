@@ -1,0 +1,2 @@
+runs/reviewer/*.csv text eol=lf
+runs/reviewer/*.json text eol=lf
